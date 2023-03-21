@@ -1,7 +1,14 @@
 from django.urls import path
-from .views import CustomAuthToken
+from . import views
 
 
 urlpatterns = [
-    path('api-token-auth/', CustomAuthToken.as_view())
+    # authenticate
+    path('api-token-auth/', views.CustomAuthToken.as_view(), name='get-token'),
+    path('register/', views.registration_views, name='register'),
+    # profiles
+    path('profiles/', views.ProfileList.as_view() , name='profile-list'),
+    path('profile/<int:pk>/', views.ProfileDetail.as_view(), name='profile-detail'),
+
+
 ]
