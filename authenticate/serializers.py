@@ -30,11 +30,27 @@ class RegisterSerializer(serializers.ModelSerializer):
         return account
 
 
-class Userserializers(serializers.ModelSerializer):
+class UserSerializers(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = '__all__'
 
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
+
+    class Meta:
+        model = User
+        fields = ('old_password','new_password')
+
+
+class ChangeUsernameSerializers(serializers.Serializer):
+    new_username = serializers.CharField(required=True)
+
+    class Meta:
+        model = User
+        fields = ('new_username',)
 
 class ProfileSerializers(serializers.ModelSerializer):
     first_name = serializers.CharField(source='user.first_name')

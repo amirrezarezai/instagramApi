@@ -3,10 +3,12 @@ from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
-from .serializers import RegisterSerializer,ProfileSerializers
+from .serializers import RegisterSerializer,ProfileSerializers,ChangePasswordSerializer,ChangeUsernameSerializers,LoginWithEmailSerializers
 from rest_framework import status
 from .models import Profile
 from rest_framework.views import APIView
+from django.contrib.auth.models import User
+from rest_framework import permissions,generics
 
 
 class CustomAuthToken(ObtainAuthToken):
@@ -45,7 +47,7 @@ def registration_views(request):
 
 
 class LogoutAPIView(APIView):
-
+    permission_classes = (permissions.IsAuthenticated,)
     def post(self, request):
         request.user.auth_token.delete()
         return Response(
@@ -53,8 +55,62 @@ class LogoutAPIView(APIView):
             status=status.HTTP_204_NO_CONTENT
         )
 
+class ChangePasswordView(generics.UpdateAPIView):
+    serializer_class = ChangePasswordSerializer
+    model = User
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get_object(self, queryset=None):
+        obj = self.request.user
+        return obj
+
+    def update(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid():
+            if not self.object.check_password(serializer.data.get("old_password")):
+                return Response({"old_password": ["Wrong password."]}, status=status.HTTP_400_BAD_REQUEST)
+
+            self.object.set_password(serializer.data.get("new_password"))
+            self.object.save()
+            response = {
+                'status': 'success',
+                'code': status.HTTP_200_OK,
+                'message': 'Password updated successfully',
+                'data': []
+            }
+
+            return Response(response)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ChangeUsernameView(generics.UpdateAPIView):
+    serializer_class = ChangeUsernameSerializers
+    model = User
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def update(self, request, *args, **kwargs):
+        user = User.objects.get(username=self.request.user.username)
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid():
+            user.username = serializer.data.get("new_username")
+            user.save()
+            response = {
+                'status': 'success',
+                'code': status.HTTP_200_OK,
+                'message': 'username updated successfully',
+                'data': []
+            }
+            return Response(response)
+        return Response(serializer.errors , status=status.HTTP_400_BAD_REQUEST)
+
 
 class ProfileList(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
     def get(self, request, format=None):
         profiles = Profile.objects.all()
         serializer = ProfileSerializers(profiles, many=True)
@@ -62,6 +118,7 @@ class ProfileList(APIView):
 
 
 class ProfileDetail(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
 
     def get_object(self, pk):
         try:
@@ -86,3 +143,5 @@ class ProfileDetail(APIView):
         profile = self.get_object(pk)
         profile.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
